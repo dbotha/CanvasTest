@@ -1,3 +1,5 @@
+"use strict";
+
 var SCREEN_WIDTH 	= 800;
 var SCREEN_HEIGHT 	= 600;
 var KEY_RIGHT 		= 39;
@@ -12,8 +14,13 @@ var idleLeftAnim  	= new Animation();
 var walkRightAnim 	= new Animation();
 var walkLeftAnim  	= new Animation();
 var sprite 		  	= new Sprite(idleLeftAnim, walkLeftAnim, idleRightAnim, walkRightAnim);
+var tileMap			= new TileMap(new TileLayer(50, 50));
 var keyRightPressed = false;
 var keyLeftPressed 	= false;
+
+var fpsAccumulator = 0;
+var timeToNextFPSSnapshot = 1000;
+var fps = 0;
 
 function init() {
 	window.addEventListener('keydown', keyDown, true);
@@ -21,15 +28,34 @@ function init() {
 	initAnimations();
 	gc = document.getElementById('mycanvas').getContext('2d');
 
-	img = new Image();
-	img.src = "images/right1.png";
+	initTileMap();
+	
 	var currTime = new Date().getTime(), elapsedTime;
 	setInterval(function gameloop() {
 		elapsedTime = new Date().getTime() - currTime;
 		currTime += elapsedTime;
 		update(elapsedTime);
 		render();
+		
+		++fpsAccumulator;		
+		if ((timeToNextFPSSnapshot -= elapsedTime) <= 0) {
+			timeToNextFPSSnapshot = 1000;
+			fps = fpsAccumulator;
+			fpsAccumulator = 0;
+		}
+		
 	}, Math.round(1000 / 60));
+}
+
+function initTileMap() {
+	var tileAnim = new Animation();
+	tileAnim.addFrame("images/tile.png");
+	var playerLayer = tileMap.getPlayerLayer();
+	for (var x = 0; x < playerLayer.getWidth(); ++x) {
+		for (var y = 0; y < playerLayer.getHeight(); ++y) {
+			playerLayer.setTile(x, y, new Tile(tileAnim));
+		}
+	}
 }
 
 function initAnimations() {
@@ -86,10 +112,23 @@ function update(elapsedTime) {
 		sprite.idle();
 	}
 	
+	tileMap.update(elapsedTime);
 	sprite.update(elapsedTime);
 }
 
 function render() {
 	gc.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	
+	var playerLayer = tileMap.getPlayerLayer();
+	for (var x = 0; x < playerLayer.getWidth(); ++x) {
+		for (var y = 0; y < playerLayer.getHeight(); ++y) {
+			var tile = playerLayer.getTile(x, y);
+			if (tile) {
+				gc.drawImage(tile.getImage(), x * 32, y * 32);
+			}
+		}
+	}
+	
 	gc.drawImage(sprite.getImage(), sprite.getX(), sprite.getY());
+	gc.fillText("FPS: " + fps, 20, 20);
 }
