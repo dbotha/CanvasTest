@@ -1,0 +1,207 @@
+<html>
+	<head>
+		<script type="text/javascript">
+			var MIN_NODES = 5;
+			var MAX_NODES = 30;
+			var NUM_LAYERS = 1;
+			var WIDTH_IN_POINTS = 10000;
+			var HEIGHT_IN_POINTS = 10000;
+			
+			var MIN_ANIMATE_DURATION = 500;
+			var MAX_ANIMATE_DURATION = 5000;
+			
+			var MAX_CIRCLE_DIAMETER = 15;
+			
+			var canvas;
+			var context;
+			var scaleX, scaleY;
+			
+			var layers = [];
+			
+			function Edge(startNode, endNode) {
+				this.startNode = startNode;
+				this.endNode = endNode;
+			}
+						
+			function init() {
+				canvas  = document.getElementById("pointcanvas");
+				canvas.width  = window.innerWidth;
+				canvas.height = window.innerHeight;
+				context = canvas.getContext("2d");
+				
+				for (var i = 0; i < NUM_LAYERS; ++i) {
+					var layer = new AnimatingLayer();
+					layer.generateNewedges();
+					layers.push(layer);
+				}
+				
+				scaleX = canvas.width / WIDTH_IN_POINTS;
+				scaleY = canvas.height / HEIGHT_IN_POINTS;
+				
+				// Start animation loop:
+				var currTime = new Date().getTime(), elapsedTime;
+				setInterval(function gameloop() {
+					elapsedTime = new Date().getTime() - currTime;
+					currTime += elapsedTime;
+					
+					try {
+						update(elapsedTime);
+						render();
+					} catch (ex) {
+						alert(ex);
+					}
+				}, Math.round(1000 / 60));
+			}
+			
+			function AnimatingLayer() {
+				this.edges   			= [];
+				this.startNodes 		= [];
+				this.endNodes 	  		= [];
+				this.growing 	  		= true;	
+				this.totalElapsedTime 	= 0;
+				this.animateDuration 	= MIN_ANIMATE_DURATION + Math.floor(Math.random() * (MAX_ANIMATE_DURATION - MIN_ANIMATE_DURATION));
+				this.percentComplete    = 0;
+				this.colour 			= "#000000";
+			}
+			
+			AnimatingLayer.prototype.update = function(elapsedTime) {
+				this.totalElapsedTime += elapsedTime;
+				this.percentComplete = this.totalElapsedTime / this.animateDuration;
+				if (this.percentComplete >= 1.0) {
+					this.animateDuration = MIN_ANIMATE_DURATION + Math.floor(Math.random() * (MAX_ANIMATE_DURATION - MIN_ANIMATE_DURATION));
+					this.percentComplete = 0;
+					this.totalElapsedTime = 0;
+					
+					this.growing = !this.growing;
+					if (this.growing) {
+						this.generateNewedges();	
+					}
+				}
+			}
+			
+			AnimatingLayer.prototype.generateNewedges = function() {
+				// on the absolute first run we don't have any previous end nodes to start from so generate
+				// some random start nodes aswell.
+				var firstRun = this.startNodes.length == 0; 
+													   
+				// generate some random nodes to grow edges from
+				this.startNodes = this.endNodes;
+				this.endNodes   = [];
+				
+				var numNodes = MIN_NODES + Math.floor(Math.random() * (MAX_NODES - MIN_NODES));
+				for (var i = 0; i < numNodes; ++i) {
+					if (firstRun) {
+						this.startNodes.push({x: Math.random() * WIDTH_IN_POINTS, y: Math.random() * HEIGHT_IN_POINTS});	
+					}
+					this.endNodes.push({x: Math.random() * WIDTH_IN_POINTS, y: Math.random() * HEIGHT_IN_POINTS, incomingCount: 0});
+				}
+				
+				// generate some edges between nodes.
+				this.edges = [];
+				
+				// require every start node must have an outward growing edge, provides a slightly nicer looking effect
+				for (var i = 0; i < this.startNodes.length; ++i) {
+					var startNode = this.startNodes[i];
+					var endNode   = this.endNodes[Math.floor(Math.random() * this.endNodes.length)];
+					++endNode.incomingCount;
+					this.edges.push(new Edge(startNode, endNode)); 
+				}
+				
+				// randomly generate some more edges
+				var numEdges = Math.floor(Math.random() * this.endNodes.length * this.startNodes.length);
+				for (var i = 0; i < numEdges; ++i) {
+					var startNode = this.startNodes[Math.floor(Math.random() * this.startNodes.length)];
+					var endNode   = this.endNodes[Math.floor(Math.random() * this.endNodes.length)];
+					++endNode.incomingCount;
+					this.edges.push(new Edge(startNode, endNode)); 
+				}
+				
+				// remove all the end nodes that have node edges leading to them, this is possible as
+				// we randomly select end nodes.
+				var temp = [];
+				for (var i = 0; i < this.endNodes.length; ++i) {
+					if (this.endNodes[i].incomingCount > 0) {
+						temp.push(this.endNodes[i]);
+					}
+				}
+				this.endNodes = temp;
+			};
+			
+			function update(elapsedTime) {
+				for (var i = 0; i < layers.length; ++i) {
+					layers[i].update(elapsedTime);
+				}
+			}
+			
+			function render() {
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				for (var i = 0; i < layers.length; ++i) {
+					var layer = layers[i];
+					for (var j = 0; j < layer.edges.length; ++j) {
+						var edge = layer.edges[j];
+						
+						if (layer.growing) {
+							drawEdge(edge.startNode, edge.endNode, layer.colour, layer.percentComplete);
+							drawPoint(edge.startNode, layer.colour, MAX_CIRCLE_DIAMETER * (1.0 - layer.percentComplete));
+						} else {
+							drawEdge(edge.endNode, edge.startNode, layer.colour, 1.0 - layer.percentComplete);
+							drawPoint(edge.endNode, layer.colour, MAX_CIRCLE_DIAMETER * layer.percentComplete);
+						}
+					}
+				}
+			}
+			
+			function drawEdge(p1, p2, colour, percentComplete) {
+				var dx = p1.x - p2.x;
+				var dy = p1.y - p2.y;
+				
+				var totalLineLength = Math.sqrt(dx*dx + dy*dy);
+				var partialLine = totalLineLength * percentComplete;
+
+				var angle = Math.atan2(dy, dx);
+				var newX = p1.x - Math.cos(angle) * partialLine;
+				var newY = p1.y - Math.sin(angle) * partialLine;
+				
+				context.fillStyle = colour;
+				context.beginPath();
+				context.moveTo(p1.x * scaleX, p1.y * scaleY);
+				context.lineTo(newX * scaleX, newY * scaleY);
+				context.stroke();
+			}
+			
+			function drawPoint(p, colour, radius) {
+				var x = p.x * scaleX;
+				var y = p.y * scaleY;
+				
+				context.fillStyle = colour;
+				context.beginPath();
+				context.arc(x, y, radius || 1, 0, Math.PI * 2, true); 
+				context.closePath();
+				context.fill();
+			}
+			
+			// @format (hex|rgb|null) : Format to return, default is integer
+            function randomColor(format){
+                var rint = Math.round(0xffffff * Math.random());
+                switch (format) {
+                    case 'hex':
+                        return ('#0' + rint.toString(16)).replace(/^#0([0-9a-f]{6})$/i, '#$1');
+                        break;
+                        
+                    case 'rgb':
+                        return 'rgb(' + (rint >> 16) + ',' + (rint >> 8 & 255) + ',' + (rint & 255) + ')';
+                        break;
+                        
+                    default:
+                        return rint;
+                        break;
+                }
+            }
+
+			
+		</script>
+	</head>
+	<body onload="init();">
+		<canvas id="pointcanvas" width="800" height="600" ></canvas>
+	</body>
+</html>

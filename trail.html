@@ -1,0 +1,69 @@
+<html>
+	<head>
+		
+		<script type="text/javascript" src="src/animation.js"></script>
+		<script type="text/javascript">
+			var canvas;
+			var context;
+			
+			var dustAnim = new Animation();
+						
+			function TrailItem(x, y) {
+				
+			}
+						
+			function init() {
+				window.addEventListener('mousedown', mousedown, true);
+				window.addEventListener('mouseup', mouseup, true);
+				
+				dustAnim.addFrame("images/dust1.png", 60);
+				dustAnim.addFrame("images/dust2.png", 60);
+				dustAnim.addFrame("images/dust3.png", 60);
+				dustAnim.addFrame("images/dust4.png", 60);
+				dustAnim.addFrame("images/dust5.png", 60);
+			
+				canvas  = document.getElementById("pointcanvas");
+				canvas.width  = window.innerWidth;
+				canvas.height = window.innerHeight;
+				context = canvas.getContext("2d");
+
+				var currTime = new Date().getTime(), elapsedTime;
+				setInterval(function gameloop() {
+					elapsedTime = new Date().getTime() - currTime;
+					currTime += elapsedTime;
+					
+					try {
+						update(elapsedTime);
+						render();
+					} catch (ex) {
+						alert(ex);
+					}
+				}, Math.round(1000 / 60));
+			}
+			
+			function update(elapsedTime) {
+				dustAnim.update(elapsedTime);
+			}
+			
+			function mouseup(event) {
+				
+			}
+			
+			function mousedown(event) {
+				var x = event.offsetX;
+				var y = event.offsetY;
+				
+			}
+			
+			function render() {
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				context.drawImage(dustAnim.getImage(), 10, 10);
+			}
+			
+			
+		</script>
+	</head>
+	<body onload="init();">
+		<canvas id="pointcanvas" width="800" height="600" ></canvas>
+	</body>
+</html>

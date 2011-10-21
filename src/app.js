@@ -25,6 +25,9 @@ var fps = 0;
 function init() {
 	window.addEventListener('keydown', keyDown, true);
 	window.addEventListener('keyup', keyUp, true);
+	window.addEventListener('mousemove', mouseMove, true);
+	window.addEventListener('mousedown', mouseDown, true);
+	window.addEventListener('mouseup', mouseUp, true);
 	initAnimations();
 	gc = document.getElementById('mycanvas').getContext('2d');
 
@@ -93,6 +96,29 @@ function setPressed(keyCode, pressed) {
 		sprite.jump();
 		break;
 	}
+}
+
+function mouseMove(event) {
+	if (gotSprite) {
+
+	}
+}
+
+var prevX, prevY;
+var gotSprite = false;
+function mouseDown(event) {
+	var x = event.offsetX;
+	var y = event.offsetY;
+	if (x >= sprite.getX() && x <= sprite.getX() + 32
+			&& y >= sprite.getY() && y <= sprite.getY() + 48) {
+		prevX = x;
+		prevY = y;
+		gotSprite = true;
+	}
+}
+
+function mouseUp(event) {
+	gotSprite = false;
 }
 
 function keyDown(event) {

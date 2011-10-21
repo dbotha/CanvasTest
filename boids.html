@@ -1,0 +1,197 @@
+<html>
+	<head>
+		<script type="text/javascript">
+			var KEY_SPACE = 32;
+			var NUM_BOIDS = 100;
+			var WIDTH_IN_POINTS = 10000;
+			var HEIGHT_IN_POINTS = 10000;
+			var canvas;
+			var context;
+			var scaleX, scaleY;
+			
+			var scatter = false;
+			
+			function Boid() {
+				this.x = 0;
+				this.y = 0;
+				this.vx = 0;
+				this.vy = 0;
+			}
+			
+			var boids = [];
+			
+			function keydown(event) {
+				if (event.keyCode == KEY_SPACE) {
+					scatter = true;
+				}
+			}
+
+			function keyup(event) {
+				if (event.keyCode == KEY_SPACE) {
+					scatter = false;
+				}
+			}
+
+			function init() {				
+				canvas  = document.getElementById("pointcanvas");
+				canvas.width  = window.innerWidth;
+				canvas.height = window.innerHeight;
+				context = canvas.getContext("2d");
+				scaleX = canvas.width / WIDTH_IN_POINTS;
+				scaleY = canvas.height / HEIGHT_IN_POINTS;
+				
+				window.addEventListener('keydown', keydown, true);
+				window.addEventListener('keyup', keyup, true);
+				
+				for (var i = 0; i < NUM_BOIDS; ++i) {
+					var b = new Boid();
+					b.x = Math.floor(Math.random() * canvas.width);
+					b.y = Math.floor(Math.random() * canvas.height);
+					boids.push(b);
+				}
+				
+				// Start animation loop:
+				var currTime = new Date().getTime(), elapsedTime;
+				setInterval(function gameloop() {
+					elapsedTime = new Date().getTime() - currTime;
+					currTime += elapsedTime;
+					
+					try {
+						update(elapsedTime);
+						render();
+					} catch (ex) {
+						alert(ex);
+					}
+				}, Math.round(1000 / 60));
+			}
+			
+			// flock toward perceived centre of mass
+			function rule1(boid) {
+				var perceivedCOM = {x: 0, y: 0}; // COM = centre of mass
+				for (var i = 0; i < boids.length; ++i) {
+					var boid2 = boids[i];
+					if (boid != boid2) {
+						perceivedCOM.x += boid2.x;
+						perceivedCOM.y += boid2.y;
+					}
+				}
+				
+				perceivedCOM.x /= (boids.length - 1);
+				perceivedCOM.y /= (boids.length - 1);
+				 
+				return {vx: (perceivedCOM.x - boid.x) / 100, vy: (perceivedCOM.y - boid.y) / 100};
+			}
+			
+			// try to keep a small distance away from other boids
+			function rule2(boid) {
+				var v = {vx: 0, vy: 0};
+				for (var i = 0; i < boids.length; ++i) {
+					var boid2 = boids[i];
+					if (boid != boid2) {
+						var dx = boid.x - boid2.x;
+						var dy = boid.y - boid2.y;
+						var squaredSeperation = (dx * dx + dy * dy);
+						if (squaredSeperation < 20 * 20) {
+							v.vx -= (boid2.x - boid.x);
+							v.vy -= (boid2.y - boid.y);
+						}
+					}
+				}
+				return v;
+			}
+			
+			// move towards perceived velocity of peers
+			function rule3(boid) {
+				var perceivedVelocity = {vx: 0, vy: 0};
+				for (var i = 0; i < boids.length; ++i) {
+					var boid2 = boids[i];
+					if (boid != boid2) {
+						perceivedVelocity.vx += boid2.vx;
+						perceivedVelocity.vy += boid2.vy;
+					}
+				}
+				
+				perceivedVelocity.vx /= (boids.length - 1);
+				perceivedVelocity.vy /= (boids.length - 1);
+				
+				return {vx: perceivedVelocity.vx / 8, vy: perceivedVelocity.vy / 8};
+			}
+
+			function update(elapsedTime) {
+				for (var i = 0; i < boids.length; ++i) {
+					var boid = boids[i];
+					var v1 = rule1(boid);
+					var v2 = rule2(boid);
+					var v3 = rule3(boid);
+					
+					boid.vx += (scatter ? -1 : 1 ) * v1.vx + v2.vx + v3.vx;
+					boid.vy += (scatter ? -1 : 1 ) * v1.vy + v2.vy + v3.vy;
+					
+					// bound position:
+					if (boid.x < 0) {
+						boid.vx = 10;
+					} else if (boid.x > canvas.width) {
+						boid.vx = -10;
+					}
+					
+					if (boid.y < 0) {
+						boid.vy = 10;
+					} else if (boid.y > canvas.height) {
+						boid.vy = -10;
+					}
+					
+					boid.vx = Math.min(10, boid.vx);
+					boid.vx = Math.max(-10, boid.vx);
+					boid.vy = Math.min(10, boid.vy);
+					boid.vy = Math.max(-10, boid.vy);
+					
+					boid.x += /*elapsedTime **/ boid.vx;
+					boid.y += /*elapsedTime **/ boid.vy;
+				}
+					
+			}
+			
+			function render() {
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				for (var i = 0; i < boids.length; ++i) {
+					var boid = boids[i];
+					drawPoint({x: boid.x, y: boid.y}, '#000000', 5);
+				}
+			}
+			
+			function drawPoint(p, colour, radius) {
+				var x = p.x;
+				var y = p.y;
+				
+				context.fillStyle = colour;
+				context.beginPath();
+				context.arc(x, y, radius || 1, 0, Math.PI * 2, true); 
+				context.closePath();
+				context.fill();
+			}
+			
+			// @format (hex|rgb|null) : Format to return, default is integer
+            function randomColor(format){
+                var rint = Math.round(0xffffff * Math.random());
+                switch (format) {
+                    case 'hex':
+                        return ('#0' + rint.toString(16)).replace(/^#0([0-9a-f]{6})$/i, '#$1');
+                        break;
+                        
+                    case 'rgb':
+                        return 'rgb(' + (rint >> 16) + ',' + (rint >> 8 & 255) + ',' + (rint & 255) + ')';
+                        break;
+                        
+                    default:
+                        return rint;
+                        break;
+                }
+            }
+
+			
+		</script>
+	</head>
+	<body onload="init();">
+		<canvas id="pointcanvas" width="800" height="600" ></canvas>
+	</body>
+</html>
