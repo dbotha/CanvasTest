@@ -12,33 +12,47 @@
 				
 			}
 						
+			var sin = Math.sin;
+			var cos = Math.cos;
+			var tan = Math.tan;
+			var atan2 = Math.atan2;
+		
+			function rads(deg) {
+				return deg * Math.PI / 180;
+			}
+						
 			function init() {
-				window.addEventListener('mousedown', mousedown, true);
-				window.addEventListener('mouseup', mouseup, true);
-				
-				dustAnim.addFrame("images/dust1.png", 60);
-				dustAnim.addFrame("images/dust2.png", 60);
-				dustAnim.addFrame("images/dust3.png", 60);
-				dustAnim.addFrame("images/dust4.png", 60);
-				dustAnim.addFrame("images/dust5.png", 60);
-			
-				canvas  = document.getElementById("pointcanvas");
-				canvas.width  = window.innerWidth;
-				canvas.height = window.innerHeight;
-				context = canvas.getContext("2d");
-
-				var currTime = new Date().getTime(), elapsedTime;
-				setInterval(function gameloop() {
-					elapsedTime = new Date().getTime() - currTime;
-					currTime += elapsedTime;
-					
-					try {
-						update(elapsedTime);
-						render();
-					} catch (ex) {
-						alert(ex);
-					}
-				}, Math.round(1000 / 60));
+				try {
+					alert(atan2(sin(rads(90))), cos(0) * tan(0) - sin(0) * cos(rads(90)));
+				} catch (ex) {
+					alert(ex);
+				}
+//				window.addEventListener('mousedown', mousedown, true);
+//				window.addEventListener('mouseup', mouseup, true);
+//				
+//				dustAnim.addFrame("images/dust1.png", 60);
+//				dustAnim.addFrame("images/dust2.png", 60);
+//				dustAnim.addFrame("images/dust3.png", 60);
+//				dustAnim.addFrame("images/dust4.png", 60);
+//				dustAnim.addFrame("images/dust5.png", 60);
+//			
+//				canvas  = document.getElementById("pointcanvas");
+//				canvas.width  = window.innerWidth;
+//				canvas.height = window.innerHeight;
+//				context = canvas.getContext("2d");
+//
+//				var currTime = new Date().getTime(), elapsedTime;
+//				setInterval(function gameloop() {
+//					elapsedTime = new Date().getTime() - currTime;
+//					currTime += elapsedTime;
+//					
+//					try {
+//						update(elapsedTime);
+//						render();
+//					} catch (ex) {
+//						alert(ex);
+//					}
+//				}, Math.round(1000 / 60));
 			}
 			
 			function update(elapsedTime) {
@@ -52,7 +66,6 @@
 			function mousedown(event) {
 				var x = event.offsetX;
 				var y = event.offsetY;
-				
 			}
 			
 			function render() {

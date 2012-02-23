@@ -33,11 +33,19 @@ function init() {
 
 	initTileMap();
 	
+	var elapsedTimeAccumulator = 0;
+	var frameDuration = Math.floor(1000 / 60);
 	var currTime = new Date().getTime(), elapsedTime;
-	setInterval(function gameloop() {
+	
+	function gameloop() {
 		elapsedTime = new Date().getTime() - currTime;
 		currTime += elapsedTime;
-		update(elapsedTime);
+		
+		elapsedTimeAccumulator += elapsedTime;
+		while (elapsedTimeAccumulator >= frameDuration) {
+			elapsedTimeAccumulator -= frameDuration;
+			update(frameDuration);
+		}
 		render();
 		
 		++fpsAccumulator;		
@@ -47,7 +55,14 @@ function init() {
 			fpsAccumulator = 0;
 		}
 		
-	}, Math.round(1000 / 60));
+	}
+	
+	
+	(function animloop(){
+		webkitRequestAnimationFrame(animloop);
+	      gameloop();
+	    })();
+	
 }
 
 function initTileMap() {
